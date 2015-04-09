@@ -95,9 +95,9 @@ while the overview of storm functioning can be obtained using the `storm-ui`, th
 
 ### Building / Installation
 
-The jar should be at [maven.org](https://maven.org), so normally you don't have to build it.
+I am looking forward to put the jar to [maven.org](https://maven.org), but it is not yet there.
 
-But, in case you need it, please follow the instruction below.
+Please follow the instruction below to build it and install it in local repository.
 
 ```
 # clone the repository:
