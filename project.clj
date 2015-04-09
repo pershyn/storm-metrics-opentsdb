@@ -3,7 +3,7 @@
   :dependencies [[org.clojure/clojure "1.5.1"]]
   :min-lein-version "2.0.0"
   :aot :all
-  :profiles {:dev
+  :profiles {:provided
               {:dependencies [
                                ;; the storm server only provides the storm-core.
                                ;; so storm-core jar should be excluded when building uberjar
