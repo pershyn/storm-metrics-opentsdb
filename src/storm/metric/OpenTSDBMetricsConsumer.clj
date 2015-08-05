@@ -3,14 +3,15 @@
            (java.io DataOutputStream
                     OutputStreamWriter)
            (java.nio.charset Charset)
-           (java.util Map)
+           (java.util Map HashMap)
            (backtype.storm.task TopologyContext IErrorReporter)
            (backtype.storm Config)
-           (backtype.storm.metric.api IMetricsConsumer$TaskInfo))
-  (:use [backtype.storm log])
+           (backtype.storm.metric.api IMetricsConsumer$TaskInfo
+                                      IMetricsConsumer$DataPoint))
   (:gen-class :name storm.metric.OpenTSDBMetricsConsumer
               :implements [backtype.storm.metric.api.IMetricsConsumer]
-              :methods [^:static [makeConfig [String Integer String] java.util.Map]]))
+              :methods [^:static [makeConfig [String Integer String]
+                                  java.util.Map]]))
 
 (def tsd-host-key "metrics.opentsdb.tsd_host")
 (def tsd-port-key "metrics.opentsdb.tsd_port")
@@ -28,28 +29,27 @@
                ^Integer tsd-port]
   (dosync
     (ref-set socket (Socket. tsd-host tsd-port))
-    (ref-set stream (DataOutputStream. (.getOutputStream @socket)))
-    (ref-set writer (OutputStreamWriter. @stream (Charset/forName "UTF-8")))
-    (log-message "Created socket: " (bean @socket)
-    (log-message "Created stream:" (bean @stream)))))
+    (ref-set stream (DataOutputStream. (.getOutputStream ^Socket @socket)))
+    (ref-set writer (OutputStreamWriter.
+                      ^DataOutputStream @stream
+                      (Charset/forName "UTF-8")))))
 
 (defn- disconnect []
   (dosync
-    (.close @stream)
-    (.close @socket)
+    (.close ^DataOutputStream @stream)
+    (.close ^Socket @socket)
     (ref-set stream nil)
-    (ref-set socket nil)
-    (log-message "Closed socket and stream.")))
+    (ref-set socket nil)))
 
 (defn- send-data [data]
   (let [data (str "put " data "\n")]  ;"\r\n"
     ;(log-message "Sending: " data)
-    (.write @writer data )
-    (.flush @writer)
-    ))
+    (.write ^OutputStreamWriter @writer
+            data )
+    (.flush ^OutputStreamWriter @writer)))
 
 (defn- expand-complex-datapoint
-  [dp]
+  [^IMetricsConsumer$DataPoint dp]
   (if (or (map? (.value dp))
           (instance? java.util.AbstractMap (.value dp)))
     (vec (for [[k v] (.value dp)]
@@ -62,8 +62,11 @@
 
    And we want to extract partition id from them, this method is used."
   [kafka-metric]
-  (if-let [match (re-find #"(Partition\{host=.*,\spartition=(\d*)\}/).*" kafka-metric)]
-      (str (clojure.string/replace kafka-metric #"Partition\{host=.*,\spartition=\d*\}/" "")
+  (if-let [match (re-find #"(Partition\{host=.*,\spartition=(\d*)\}/).*"
+                          kafka-metric)]
+      (str (clojure.string/replace kafka-metric
+                                   #"Partition\{host=.*,\spartition=\d*\}/"
+                                   "")
            " partition="
            (nth match 2))
       (if-let [match2 (re-find #"partition_(\d*)/" kafka-metric)]
@@ -77,7 +80,7 @@
   [metric-id-header
    timestamp
    tags
-   datapoint]
+   ^IMetricsConsumer$DataPoint datapoint]
 
   ; The metrics are received in data points for task.
   ; Next values are in task id:
@@ -108,18 +111,23 @@
                                            val " "
                                            tags))
                       obj))
-        ;; datapoint value is a collection of other datapoints? Could this happen?
+        ;; datapoint value is a collection of other datapoints?
+        ;; Could this happen?
         (if (coll? obj)
           (throw (Exception. (str "Failed to parse coll metric: " obj)))
-          (if (instance? java.util.HashMap obj)
+          (if (instance? HashMap obj)
             ;; skip the empty metric and process only maps
-            (when-not (.isEmpty obj)
+            (when-not (.isEmpty ^HashMap obj)
               (flatten (map (fn [[key val]] (str metric-id "." key " "
                                                  timestamp " "
                                                  val " "
                                                  tags))
                             obj)))
-            (throw (Exception. (str "Failed to parse metric: Not expected type: " (type obj) ": " obj )))))))))
+            (throw
+              (Exception.
+                (format "Failed to parse metric: Not expected type: %s: %s"
+                        (type obj)
+                        obj )))))))))
 
 ;; it is not possible to create static fields in class in clojure
 ;; like in is made in storm's Config, but it works with static method.
@@ -167,8 +175,11 @@
                   "task-id=" (.srcTaskId taskinfo) " "
                   "component-id=" (.srcComponentId taskinfo))
         metrics (->> datapoints
-                     (map #(datapoint-to-metrics @metric-id-header timestamp tags %))
-                     (flatten )
+                     (map #(datapoint-to-metrics @metric-id-header
+                                                 timestamp
+                                                 tags
+                                                 %))
+                     (flatten)
                      (filter (complement nil?)) ;; filter out nil's
                      ;(filter (complement #(re-find #"__" %))) ;; filter out storm system metrics TODO: add this option to parameter
                      (map normalize-kafka-metric-names))]
