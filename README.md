@@ -12,13 +12,13 @@ Add this as a dependency to your `pom.xml`
 
     <dependency>
       <groupId>storm.metric</groupId>
-      <artifactId>storm-metrics-opentsdb</artifactId>
-      <version>0.0.2</version>
+      <artifactId>opentsdb-metrics-consumer</artifactId>
+      <version>0.0.4</version>
     </dependency>
 
 or `project.clj`:
 
-    [storm.metric/opentsdb-metrics-consumer "0.0.2"]
+    [storm.metric/opentsdb-metrics-consumer "0.0.4"]
 
 Then use it:
 

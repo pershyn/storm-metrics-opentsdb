@@ -29,10 +29,15 @@
                ^Integer tsd-port]
   (dosync
     (ref-set socket (Socket. tsd-host tsd-port))
+    (.setSoTimeout ^Socket @socket
+                   (* 1 1000))
+    (.setTcpNoDelay ^Socket @socket
+                    true)
     (ref-set stream (DataOutputStream. (.getOutputStream ^Socket @socket)))
     (ref-set writer (OutputStreamWriter.
                       ^DataOutputStream @stream
                       (Charset/forName "UTF-8")))))
+;; TODO: use stream directly
 
 (defn- disconnect []
   (dosync
