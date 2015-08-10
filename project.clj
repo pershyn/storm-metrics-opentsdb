@@ -1,9 +1,10 @@
-(defproject storm.metric/opentsdb-metrics-consumer "0.0.4"
+(defproject storm.metric/opentsdb-metrics-consumer "0.0.5"
   :description "Storm Metrics OpenTSDB Metrics Consumer"
   :dependencies [[org.clojure/clojure "1.5.1"]]
   :min-lein-version "2.0.0"
   :global-vars {*warn-on-reflection* true}
   :aot :all
+  :main storm.metric.OpenTSDBMetricsConsumer
   :profiles {:provided
               {:dependencies [
                               ;; the storm server only provides the storm-core.
@@ -27,4 +28,6 @@
                               ;; There are also jars that are compiled-in into storm-core, but they are shaded
                               ;; See https://github.com/apache/storm/blob/master/storm-core/pom.xml#L394
                               ;; and https://github.com/apache/storm/blob/master/storm-dist/binary/src/main/assembly/binary.xml#L34
-                              ]}})
+                              ]}
+             :dev {:dependencies [;; unit testing framework
+                                  [midje "1.6.3"]]}})
