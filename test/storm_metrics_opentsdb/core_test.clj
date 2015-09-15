@@ -20,6 +20,14 @@
                                     "partition_0/earliestTimeOffset" 86378711184
                                     "totalEarliestTimeOffset" 86378711184
                                     "partition_0/latestTimeOffset" 86664048708}
+        kafka-offset-datapoint-obj-2 {"partition_7/spoutLag" 6099
+                                      "partition_7/latestEmittedOffset" 29229164962
+                                      "partition_7/latestTimeOffset" 29229171061
+                                      "partition_7/earliestTimeOffset" 29009184937
+                                      "totalSpoutLag" 6099
+                                      "totalLatestTimeOffset" 29229171061
+                                      "totalLatestEmittedOffset" 29229164962
+                                      "totalEarliestTimeOffset" 29009184937}
         metric-id-header "hello-metric"
         timestamp (str (.timestamp taskinfo))
         tags (str "host=" (.srcWorkerHost taskinfo)
@@ -29,19 +37,27 @@
         datapoint (IMetricsConsumer$DataPoint. "test-count-metric" 12)
         multi-count-datapoint (IMetricsConsumer$DataPoint. "test-multi-count-metric"
                                                            {"mapped-metric" 32
-                                                            "mapped-metric2" 33} )
+                                                            "mapped-metric2" 33})
+        multi-count-datapoint-with-columns (IMetricsConsumer$DataPoint. "__process-latency"
+                                                                        {"bolt-number-one:default" 6.06896551724138
+                                                                         "bolt-number-two:default" 7.21590909090909})
         kafka-offset-datapoint (IMetricsConsumer$DataPoint. "kafkaOffset"
                                                             kafka-offset-datapoint-obj)]
     (facts
       "about datapoint-to-metrics"
-    (fact "works as expected on normal datapoint"
-          (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags datapoint)
-          => "hello-metric.test-count-metric 77777777 12 host=worker.host.name port=12345 task-id=12 component-id=component-id")
+      (fact "works as expected on normal datapoint"
+            (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags datapoint)
+            => "hello-metric.test-count-metric 77777777 12 host=worker.host.name port=12345 task-id=12 component-id=component-id")
 
-    (fact "works as expected on multi-count-datapoint"
-          (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags multi-count-datapoint)
-          => (list "hello-metric.test-multi-count-metric.mapped-metric2 77777777 33 host=worker.host.name port=12345 task-id=12 component-id=component-id"
-                   "hello-metric.test-multi-count-metric.mapped-metric 77777777 32 host=worker.host.name port=12345 task-id=12 component-id=component-id"))
+      (fact "works as expected on multi-count-datapoint"
+            (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags multi-count-datapoint)
+            => (list "hello-metric.test-multi-count-metric.mapped-metric2 77777777 33 host=worker.host.name port=12345 task-id=12 component-id=component-id"
+                     "hello-metric.test-multi-count-metric.mapped-metric 77777777 32 host=worker.host.name port=12345 task-id=12 component-id=component-id"))
+
+      (fact "works as expected on multi-count-datapoint with columns in names"
+            (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags multi-count-datapoint-with-columns)
+            => (list "hello-metric.__process-latency.bolt-number-one.default 77777777 6.06896551724138 host=worker.host.name port=12345 task-id=12 component-id=component-id"
+                     "hello-metric.__process-latency.bolt-number-two.default 77777777 7.21590909090909 host=worker.host.name port=12345 task-id=12 component-id=component-id"))
 
     (fact "works as expected on kafkaOffset datapoint"
           (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags kafka-offset-datapoint)
@@ -54,32 +70,41 @@
                    "hello-metric.kafkaOffset.latestEmittedOffset 77777777 86664047241 host=worker.host.name port=12345 task-id=12 component-id=component-id partition=0"
                    "hello-metric.kafkaOffset.latestTimeOffset 77777777 86664048708 host=worker.host.name port=12345 task-id=12 component-id=component-id partition=0")))
 
-(facts
-  "about kafkaOffset-datapoint-to-metric"
-  (fact
-    "metrics from kafka spout version 0.9.5 are parsed correctly"
-    (kafkaOffset-datapoint-to-metric "kafkaOffset" 1439199951 "host=test-host" kafka-offset-datapoint-obj)
-    => (list "kafkaOffset.totalSpoutLag 1439199951 1467 host=test-host"
-             "kafkaOffset.earliestTimeOffset 1439199951 86378711184 host=test-host partition=0"
-             "kafkaOffset.totalLatestEmittedOffset 1439199951 86664047241 host=test-host"
-             "kafkaOffset.totalLatestTimeOffset 1439199951 86664048708 host=test-host"
-             "kafkaOffset.spoutLag 1439199951 1467 host=test-host partition=0"
-             "kafkaOffset.totalEarliestTimeOffset 1439199951 86378711184 host=test-host"
-             "kafkaOffset.latestEmittedOffset 1439199951 86664047241 host=test-host partition=0"
-             "kafkaOffset.latestTimeOffset 1439199951 86664048708 host=test-host partition=0")))
+    (facts
+      "about kafkaOffset-datapoint-to-metric"
+      (fact
+        "metrics from kafka spout version 0.9.5 are parsed correctly"
+        (kafkaOffset-datapoint-to-metric "kafkaOffset" 1439199951 "host=test-host" kafka-offset-datapoint-obj)
+        => (list "kafkaOffset.totalSpoutLag 1439199951 1467 host=test-host"
+                 "kafkaOffset.earliestTimeOffset 1439199951 86378711184 host=test-host partition=0"
+                 "kafkaOffset.totalLatestEmittedOffset 1439199951 86664047241 host=test-host"
+                 "kafkaOffset.totalLatestTimeOffset 1439199951 86664048708 host=test-host"
+                 "kafkaOffset.spoutLag 1439199951 1467 host=test-host partition=0"
+                 "kafkaOffset.totalEarliestTimeOffset 1439199951 86378711184 host=test-host"
+                 "kafkaOffset.latestEmittedOffset 1439199951 86664047241 host=test-host partition=0"
+                 "kafkaOffset.latestTimeOffset 1439199951 86664048708 host=test-host partition=0"))
+      (fact
+        "another metrics from kafka spout version 0.9.5 are parsed correctly"
+        (kafkaOffset-datapoint-to-metric "kafkaOffset" 1439199951 "host=test-host2" kafka-offset-datapoint-obj-2)
+        => (list "kafkaOffset.earliestTimeOffset 1439199951 29009184937 host=test-host2 partition=7"
+                 "kafkaOffset.totalSpoutLag 1439199951 6099 host=test-host2"
+                 "kafkaOffset.totalLatestEmittedOffset 1439199951 29229164962 host=test-host2"
+                 "kafkaOffset.totalLatestTimeOffset 1439199951 29229171061 host=test-host2"
+                 "kafkaOffset.spoutLag 1439199951 6099 host=test-host2 partition=7"
+                 "kafkaOffset.latestTimeOffset 1439199951 29229171061 host=test-host2 partition=7"
+                 "kafkaOffset.totalEarliestTimeOffset 1439199951 29009184937 host=test-host2"
+                 "kafkaOffset.latestEmittedOffset 1439199951 29229164962 host=test-host2 partition=7")))
 
-(facts 
-  "about kafkaPartition-data-point-to-metric"
-  (let [datapoint-obj {"Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPICallCount" 469
-                       "Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPILatencyMax" 741
-                       "Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPIMessageCount" 196020
-                       "Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPILatencyMean" 6.072}]
-    (fact
-      "metrics from kafka spout version 0.9.5 are parsed correctly"
-      (kafkaPartition-data-point-to-metric "kafkaPartition" 1439199951 "host=testhost2" datapoint-obj)
-      => (list "kafkaPartition.fetchAPILatencyMean 1439199951 6.072 host=testhost2 partition=0"
-               "kafkaPartition.fetchAPILatencyMax 1439199951 741 host=testhost2 partition=0"
-               "kafkaPartition.fetchAPIMessageCount 1439199951 196020 host=testhost2 partition=0"
-               "kafkaPartition.fetchAPICallCount 1439199951 469 host=testhost2 partition=0")
-      )))))
-
+    (facts
+      "about kafkaPartition-data-point-to-metric"
+      (let [datapoint-obj {"Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPICallCount" 469
+                           "Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPILatencyMax" 741
+                           "Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPIMessageCount" 196020
+                           "Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPILatencyMean" 6.072}]
+        (fact
+          "metrics from kafka spout version 0.9.5 are parsed correctly"
+          (kafkaPartition-data-point-to-metric "kafkaPartition" 1439199951 "host=testhost2" datapoint-obj)
+          => (list "kafkaPartition.fetchAPILatencyMean 1439199951 6.072 host=testhost2 partition=0"
+                   "kafkaPartition.fetchAPILatencyMax 1439199951 741 host=testhost2 partition=0"
+                   "kafkaPartition.fetchAPIMessageCount 1439199951 196020 host=testhost2 partition=0"
+                   "kafkaPartition.fetchAPICallCount 1439199951 469 host=testhost2 partition=0"))))))

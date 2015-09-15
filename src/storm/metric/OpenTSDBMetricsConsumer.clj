@@ -5,10 +5,14 @@
            (backtype.storm Config)
            (backtype.storm.metric.api IMetricsConsumer$TaskInfo
                                       IMetricsConsumer$DataPoint))
+  (:require [clojure.tools.logging :as log])
   (:gen-class :name storm.metric.OpenTSDBMetricsConsumer
               :implements [backtype.storm.metric.api.IMetricsConsumer]
               :methods [^:static [makeConfig [String Integer String]
                                   java.util.Map]]))
+(defmacro log-message
+  [& args]
+  `(log/info (str ~@args)))
 
 (def tsd-host-key "metrics.opentsdb.tsd_host")
 (def tsd-port-key "metrics.opentsdb.tsd_port")
@@ -45,14 +49,6 @@
     (.send ^DatagramSocket @socket
            dp)))
 
-(defn- expand-complex-datapoint
-  [^IMetricsConsumer$DataPoint dp]
-  (if (or (map? (.value dp))
-          (instance? java.util.AbstractMap (.value dp)))
-    (vec (for [[k v] (.value dp)]
-               [(str (.name dp) "/" k) v]))
-    [[(.name dp) (.value dp)]]))
-
 (defn kafkaPartition-data-point-to-metric
   "Handle the metrics format used by kafka-spout to report kafkaPartition stats
   See storm source code for metrics format details.
@@ -61,8 +57,10 @@
   Because the metrics format is refactored in following versions.
   "
   [metric-id timestamp tags obj]
-  (if (map? obj)
+  (if (or (instance? java.util.HashMap obj)
+          (map? obj))
     (flatten (map (fn [[key val]]
+                    ;(log-message "Key: " key)
                     (if-let [match (re-find #"(Partition\{host=.*,\spartition=(\d*)\}/)(.*)"
                                             key)]
                       ;["Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPILatencyMean"
@@ -78,7 +76,8 @@
                            timestamp " "
                            val " "
                            tags)))
-                  obj))))
+                  obj))
+    (log-message "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn kafkaOffset-datapoint-to-metric
   "Handle the metrics format used by KafkaUtils to report kafkaOffset
@@ -89,21 +88,28 @@
   https://github.com/apache/storm/blob/v0.9.5/external/storm-kafka/src/jvm/storm/kafka/KafkaUtils.java
   "
   [metric-id timestamp tags obj]
-  (if (map? obj)
-    (flatten (map (fn [[key val]]
-                    (if-let [match (re-find #"partition_(\d*)/(\w*)"
-                                            key)]
-                      ;[\"partition_0/earliestTimeOffset\" \"0\" \"earliestTimeOffset\"]
-                      (str metric-id "." (nth match 2) " "
-                           timestamp " "
-                           val " "
-                           tags " "
-                           "partition=" (nth match 1))
-                      (str metric-id "." key " "
-                           timestamp " "
-                           val " "
-                           tags)))
-                  obj))))
+  (if (or (instance? java.util.HashMap obj)
+          (map? obj))
+    (do
+      ;(log-message (format "processing %s metrics for metric-id: %s, tags: %s"
+      ;                     (count obj)
+      ;                     metric-id
+      ;                     tags))
+      (flatten (map (fn [[key val]]
+                      (if-let [match (re-find #"partition_(\d*)/(\w*)"
+                                              key)]
+                        ;[\"partition_0/earliestTimeOffset\" \"0\" \"earliestTimeOffset\"]
+                        (str metric-id "." (nth match 2) " "
+                             timestamp " "
+                             val " "
+                             tags " "
+                             "partition=" (nth match 1))
+                        (str metric-id "." key " "
+                             timestamp " "
+                             val " "
+                             tags)))
+                    obj)))
+    (log-message "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn datapoint-to-metrics
   "Transforms storms datapoints to opentsdb metrics format"
@@ -122,15 +128,11 @@
   ; The data point has name and value.
   ; datapoint can be either a value with own name
   ; or a map in case of multi-count metrics
-
-  ;; TODO: should tags be with underlines or minuses?
-  ;; Is there a convention?...
-
-  ;; TODO: handle storm-kafka metrics special case
-  ;; https://github.com/apache/storm/blob/b2a8a77c3b307137527c706d0cd7635a6afe25bf/external/storm-kafka/src/jvm/storm/kafka/KafkaUtils.java
   (let [metric-id (str metric-id-header "." (.name datapoint))
         obj (.value datapoint)]
     (case (.name datapoint)
+      ;; here we handle storm-kafka metrics special case, see details at github
+      ;; https://github.com/apache/storm/blob/b2a8a77c3b307137527c706d0cd7635a6afe25bf/external/storm-kafka/src/jvm/storm/kafka/KafkaUtils.java
       "kafkaOffset" (kafkaOffset-datapoint-to-metric metric-id timestamp tags obj)
       "kafkaPartition" (kafkaPartition-data-point-to-metric metric-id timestamp tags obj)
       ;; default
@@ -138,29 +140,20 @@
         ;; datapoint is a Numberic value
         (str metric-id " " timestamp " " obj " " tags)
         ;; datapoint is a map of key-values
-        (if (map? obj)
-          (flatten (map (fn [[key val]] (str metric-id "." key " "
-                                             timestamp " "
-                                             val " "
-                                             tags))
+        (if (or (map? obj)
+                (instance? HashMap obj))
+          (flatten (map (fn [[key val]] (format "%s.%s %s %s %s"
+                                                metric-id
+                                                (clojure.string/replace (str key) ":" ".")
+                                                timestamp
+                                                val
+                                                tags))
                         obj))
-          ;; datapoint value is a collection of other datapoints?
-          ;; Could this happen?
-          (if (coll? obj)
-            (throw (Exception. (str "Failed to parse coll metric: " obj)))
-            (if (instance? HashMap obj)
-              ;; skip the empty metric and process only maps
-              (when-not (.isEmpty ^HashMap obj)
-                (flatten (map (fn [[key val]] (str metric-id "." key " "
-                                                   timestamp " "
-                                                   val " "
-                                                   tags))
-                              obj)))
-              (throw
-                (Exception.
-                  (format "Failed to parse metric: Not expected type: %s: %s"
-                          (type obj)
-                          obj ))))))))))
+          (throw
+            (Exception.
+              (format "Failed to parse metric: Not expected type: %s: %s"
+                      (type obj)
+                      obj ))))))))
 
 ;; it is not possible to create static fields in class in clojure
 ;; like in is made in storm's Config, but it works with static method.
@@ -214,9 +207,8 @@
                      ;(filter (complement #(re-find #"__" %))) ;; filter out storm system metrics TODO: add this option to parameter
                      )]
   (doseq [m metrics]
-    ;(try)
-    ;; TODO: wrap this in try-catch.
-    (send-data m))))
+    (try (send-data m)
+         (catch Exception e (log-message "Failed to send metric: " m))))))
 
 (defn -cleanup [this]
  (disconnect))
