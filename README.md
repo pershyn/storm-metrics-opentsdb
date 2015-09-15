@@ -1,10 +1,12 @@
 # Storm Metrics OpenTSDB Consumer
 
-storm-metrics-opentsdb is a module for [Storm](http://storm.apache.org/) that enables metrics collection and reporting them directly to [OpenTSDB](http://opentsdb.net/)
+`storm-metrics-opentsdb` is a module for [Storm](http://storm.apache.org/) that enables metrics collection and reporting them directly to [OpenTSDB](http://opentsdb.net/)
 
 To make sure your logic works as expected and as fast as expected, the metrics are absolutely necessary. Seeing them over time is leading to insights about bottlenecks, bugs, regressions and anomalies. You can measure on constant basis latencies, cache hits, traits of your data, anything that is critical in your case and can help to make your topology better.
 
 This project is intended to be used with [grafana](http://grafana.org/), but can be used with others OpenTSDB frontends.
+
+So far it is required to have `tcollector` with `udp_bridge` plugin installed on every node of the cluster where the topology runs - see Dependencies.
 
 ## Usage
 
@@ -13,18 +15,18 @@ Add this as a dependency to your `pom.xml`
     <dependency>
       <groupId>storm.metric</groupId>
       <artifactId>opentsdb-metrics-consumer</artifactId>
-      <version>0.0.4</version>
+      <version>0.0.9</version>
     </dependency>
 
 or `project.clj`:
 
-    [storm.metric/opentsdb-metrics-consumer "0.0.4"]
+    [storm.metric/opentsdb-metrics-consumer "0.0.9"]
 
-Then use it:
+Then use it similar to other metrics consumers:
 
 
 ```
-;; CLojure
+;; Clojure
 (ns test.main
   (:import [backtype.storm StormSubmitter
                            Config]
@@ -37,9 +39,7 @@ Then use it:
 ;; ...
 
 ;; then similar code is used to prepare config and submit the topology
-(let [consumer-config (OpenTSDBMetricsConsumer/makeConfig "mytsdhost" ;; tsd host
-                                                          (int 4242)  ;; tsd port
-                                                          "storm.metrics.") ;; metrics prefix
+(let [consumer-config (OpenTSDBMetricsConsumer/makeConfig "storm.metrics.") ;; metrics prefix
       consumer-parallelism 1 ;; how many consumer bolts needed
       config (doto (HashMap. {;; here should be the config for storm topology,
                               ;; for example
@@ -56,17 +56,38 @@ Then use it:
     (make-topology)))
 ```
 
-TODO: java usage example :-)
+Sorry, java usage example is coming. :-) (TODO)
 
-In case you have properly configured OpenTSDB and TSD daemon running, the data should end up in OpenTSDB.
+In case you have properly configured OpenTSDB, tcollector with `udp_bridge` and TSD daemon running, the data should end up in OpenTSDB.
 
 Then you can draw really nice graps in [grafana](http://grafana.org/) and see in realtime what is going on in the topology.
+
+## Dependencies
+
+Previous version `0.0.4` used the blocking TCP to talk directly to TSD daemon,
+however high performance tests showed that TSD daemon tends to slow down sometimes, lag and even die.
+
+In order to handle such scenarious properly, we have to make an admit that tsd service is not reliable and use asynchronous `java.nio` (or even `netty`) with proper timeouts, and also, which turned out to be harder, the connection should be proven to be functional.
+
+The logic to maintain the connection and testing that it is up and alive and accepts connection seemed to me pretty complicated (you can look it up in `tcollector` implementation).
+
+Unfortunately, I didn't have time for implementing this.
+
+So I decided not to reimplement all of this in clojure, rather reuse the `tcollector` with `udp_bridge` plugin.
+
+On the high loads from time to time some metrics are still lost because of the udp buffer overflow, but this turned to be much more reliable solution, than maintaining the connection to opentsdb.
+
+The bad part is that now `storm-metrics-opentsdb` tcollector with `udp_bridge` plugin have to be installed on all the nodes. But, if you do the monitoring, this is quite probable that you have them already installed.
+
+I have not found `udp_bridge` in alternative collectors, like [scollector](https://github.com/bosun-monitor/bosun/tree/master/cmd/scollector). But it doesn't mean it's not there.
+
+As a proper solution without any collector-dependencies it may be good to write directly into HBase, but this is just a theory so far.
 
 Apart from your user-defined metrics, all the storm system metrics are also available.
 
 Unfortunately I have not found a proper place where all of them are documented. So if you know one - you are welcome to add them.
 
-What may be interesting:
+### What else may be interesting:
 - __kafka spout stats__ - all the stats that storm-kafka spouts produce. Kafka tools do not recognize custom storm format that is used by storm-kafka. This can be fixed in STORM-650. `host` tag defines where the spout is running and is there for each metric. `component-id` correlates with topic, since spout reads only from one topic. The metric is send on minute basis by default. This, afaik, can be configured. In OpenTSDB frontends we can get rates on metrics, downsampling and other operations.
 
   - `storm.metrics.$topology.kafkaOffset.spoutLag` tagged by `component-id` and `partition`.
@@ -84,8 +105,9 @@ What may be interesting:
     - `storm.metrics.$topology.GC/PSMarkSweep.timeMs`
     - `storm.metrics.$topology.GC/PSMarkSweep.count`
     - `storm.metrics.$topology.GC/PSScavenge.count`
-  - tagged by `host` and `component-id`:
+  - tagged by `host`, `component-id` and `taks-id`:
     - `storm.metrics.$topology.__ack-count.default`
+    - `storm.metrics.$topology.__ack-count.your-stream-name-here`
     - `storm.metrics.$topology.__fail-count.default`
     - `storm.metrics.$topology.__sendqueue.population`
   - ... and others
@@ -146,47 +168,11 @@ Another several examples below:
   __sendqueue
   {write_pos=90057, read_pos=90057, capacity=2048, population=0}
 
-# for example from kafka spout
-kafkaPartition:
-  {
-   Partition{host=kafka-05.mytest.org:9092, partition=3}/fetchAPILatencyMean=309.0,
-   Partition{host=kafka-05.mytest.org:9092, partition=3}/fetchAPICallCount=1,
-   Partition{host=kafka-05.mytest.org:9092, partition=3}/fetchAPILatencyMax=309,
-   Partition{host=kafka-05.mytest.org:9092, partition=3}/fetchAPIMessageCount=8350,
-
-   Partition{host=kafka-06.mytest.org:9092, partition=0}/fetchAPIMessageCount=0,
-   Partition{host=kafka-06.mytest.org:9092, partition=0}/fetchAPILatencyMean=null,
-   Partition{host=kafka-06.mytest.org:9092, partition=0}/fetchAPILatencyMax=null,
-   Partition{host=kafka-06.mytest.org:9092, partition=0}/fetchAPICallCount=0,
-
-   Partition{host=kafka-07.mytest.org:9092, partition=1}/fetchAPIMessageCount=8082
-   Partition{host=kafka-07.mytest.org:9092, partition=1}/fetchAPILatencyMean=99.0,
-   Partition{host=kafka-07.mytest.org:9092, partition=1}/fetchAPICallCount=1,
-   Partition{host=kafka-07.mytest.org:9092, partition=1}/fetchAPILatencyMax=99,
-
-   Partition{host=kafka-08.mytest.org:9092, partition=2}/fetchAPIMessageCount=0,
-   Partition{host=kafka-08.mytest.org:9092, partition=2}/fetchAPILatencyMax=null,
-   Partition{host=kafka-08.mytest.org:9092, partition=2}/fetchAPICallCount=0,
-   Partition{host=kafka-08.mytest.org:9092, partition=2}/fetchAPILatencyMean=null,
-  }
-
-kafkaOffset
-  {partition_3/latestTimeOffset=30109296760,
-   totalSpoutLag=610889380,
-   totalLatestTimeOffset=30109296760,
-   totalLatestEmittedOffset=29498407380,
-   partition_3/latestEmittedOffset=29498407380,
-   totalEarliestTimeOffset=29498407377,
-   partition_3/earliestTimeOffset=29498407377,
-   partition_3/spoutLag=610889380}
-
 ```
-
-As we may see, these metrics are quite custom....
 
 ### Metrics from kafka-spout
 
-The metrics from kafka-spout have names like this "Partition{host=mykafkahost:9092, partition=2}/fetchAPIMessageCount". Looking forward to come up with some standard naming approach in kafka spout so it can be processed easily by machines then.
+The metrics from kafka-spout have names custom names, see the `core_test.clj`.
 
 For kafka-spout there a special case.
 
@@ -216,7 +202,7 @@ What is done so far in openTSDBMetricsConsumer with kafka:
 
 ### Processing storm metrics:
 
-No special cases here - all the metrics are mapped and written to opentsdb, with `/` changed to '.' and tags added where applicable:
+No special cases here - all the metrics are mapped and written to opentsdb, with `:` changed to '.' and tags added where applicable:
 
 - host - where this metrics was emitted from
 - port - port where storm-worker is running.
@@ -226,7 +212,7 @@ No special cases here - all the metrics are mapped and written to opentsdb, with
 
 ## TODO:
 
-- [ ] consider to use wrapping an OutputStreamWriter within a BufferedWriter so as to avoid frequent converter invocations. For example:  `Writer out = new BufferedWriter(new OutputStreamWriter(System.out));`
+- [ ] review the connection logic, avoid the dependency on collectors.
 - [ ] optional processing of storm system metrics
 - [ ] optional kafka special case
 
