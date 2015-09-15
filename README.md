@@ -6,7 +6,9 @@ To make sure your logic works as expected and as fast as expected, the metrics a
 
 This project is intended to be used with [grafana](http://grafana.org/), but can be used with others OpenTSDB frontends.
 
-So far it is required to have `tcollector` with `udp_bridge` plugin installed on every node of the cluster where the topology runs - see Dependencies.
+So far it is required to have `tcollector` with `udp_bridge` plugin installed on every node of the cluster where the topology runs - see reasoning in Dependencies.
+
+Developed for apache storm and kafka-spout version 0.9.5.
 
 ## Usage
 
@@ -67,7 +69,7 @@ Then you can draw really nice graps in [grafana](http://grafana.org/) and see in
 Previous version `0.0.4` used the blocking TCP to talk directly to TSD daemon,
 however high performance tests showed that TSD daemon tends to slow down sometimes, lag and even die.
 
-In order to handle such scenarious properly, we have to make an admit that tsd service is not reliable and use asynchronous `java.nio` (or even `netty`) with proper timeouts, and also, which turned out to be harder, the connection should be proven to be functional.
+In order to handle such scenarious properly, we have to admit that tsd service is not reliable and use asynchronous `java.nio` (or even `netty`) with proper timeouts, and also, which turned out to be harder, the connection should be proven to be functional.
 
 The logic to maintain the connection and testing that it is up and alive and accepts connection seemed to me pretty complicated (you can look it up in `tcollector` implementation).
 
@@ -77,7 +79,7 @@ So I decided not to reimplement all of this in clojure, rather reuse the `tcolle
 
 On the high loads from time to time some metrics are still lost because of the udp buffer overflow, but this turned to be much more reliable solution, than maintaining the connection to opentsdb.
 
-The bad part is that now `storm-metrics-opentsdb` tcollector with `udp_bridge` plugin have to be installed on all the nodes. But, if you do the monitoring, this is quite probable that you have them already installed.
+The bad part is that now `tcollector` with `udp_bridge` plugin have to be installed on all the nodes. But, if you do the monitoring, it is quite probable that you have them already installed.
 
 I have not found `udp_bridge` in alternative collectors, like [scollector](https://github.com/bosun-monitor/bosun/tree/master/cmd/scollector). But it doesn't mean it's not there.
 
@@ -85,7 +87,7 @@ As a proper solution without any collector-dependencies it may be good to write 
 
 Apart from your user-defined metrics, all the storm system metrics are also available.
 
-Unfortunately I have not found a proper place where all of them are documented. So if you know one - you are welcome to add them.
+Unfortunately, I have not found a proper place where all of them are documented. So if you know one - you are welcome to add them.
 
 ### What else may be interesting:
 - __kafka spout stats__ - all the stats that storm-kafka spouts produce. Kafka tools do not recognize custom storm format that is used by storm-kafka. This can be fixed in STORM-650. `host` tag defines where the spout is running and is there for each metric. `component-id` correlates with topic, since spout reads only from one topic. The metric is send on minute basis by default. This, afaik, can be configured. In OpenTSDB frontends we can get rates on metrics, downsampling and other operations.
