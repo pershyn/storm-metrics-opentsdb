@@ -8,24 +8,22 @@
   (:require [clojure.tools.logging :as log])
   (:gen-class :name storm.metric.OpenTSDBMetricsConsumer
               :implements [backtype.storm.metric.api.IMetricsConsumer]
-              :methods [^:static [makeConfig [String Integer String]
+              :methods [^:static [makeConfig [String]
                                   java.util.Map]]))
 (defmacro log-message
   [& args]
   `(log/info (str ~@args)))
 
-(def tsd-host-key "metrics.opentsdb.tsd_host")
-(def tsd-port-key "metrics.opentsdb.tsd_port")
 (def tsd-prefix-key "metrics.opentsdb.tsd_prefix")
 
 ;; Sockets and Streams that are used to write data to openTSDB.
 ;; connect to your localhost and use netcat to debug the output.
 (def ^InetAddress inet-address (InetAddress/getByName "localhost"))
 
-;InetAddress host = InetAddress.getByName("localhost");
+;; using the standart port for tcollector udp_bridge
+(def ^Integer tcollector-udp-bridge-port (int 8953))
 
 (def socket (ref nil))
-
 (def metric-id-header (ref nil))
 
 (defn- connect []
@@ -34,8 +32,7 @@
 
 (defn- disconnect []
   (dosync
-    (.close ^DatagramSocket @socket)
-    ))
+    (.close ^DatagramSocket @socket)))
 
 (defn- send-data [data]
   (let [data (str "put " data "\n")
@@ -44,8 +41,7 @@
         dp (DatagramPacket. bytes
                             (count bytes)
                             inet-address
-                            ;; using the standart port for tcollector udp_bridge
-                            8953)]
+                            tcollector-udp-bridge-port)]
     (.send ^DatagramSocket @socket
            dp)))
 
