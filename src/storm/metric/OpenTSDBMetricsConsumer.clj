@@ -160,10 +160,8 @@
 ;; http://stackoverflow.com/questions/16252783/is-it-possible-to-use-clojures-gen-class-macro-to-generate-a-class-with-static?rq=1
 (defn ^Map -makeConfig
   "Construct registration argument for OpenTSDBMetricsConsumer using the predefined key names."
-  [tsd_host tsd_port tsd_prefix]
-  {tsd-host-key tsd_host
-   tsd-port-key tsd_port
-   tsd-prefix-key tsd_prefix})
+  [tsd_prefix]
+  {tsd-prefix-key tsd_prefix})
 
 (defn -prepare
   [this

@@ -1,4 +1,4 @@
-(defproject storm.metric/opentsdb-metrics-consumer "0.0.9"
+(defproject storm.metric/opentsdb-metrics-consumer "0.0.10"
   :description "Storm Metrics OpenTSDB Metrics Consumer"
   :dependencies [[org.clojure/clojure "1.5.1"]]
   :min-lein-version "2.0.0"
