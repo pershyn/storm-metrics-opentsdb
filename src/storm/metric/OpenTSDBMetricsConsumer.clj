@@ -34,7 +34,9 @@
   (dosync
     (.close ^DatagramSocket @socket)))
 
-(defn- send-data [data]
+(defn- send-data 
+  "Sends data to tcollector's udp_bridge plugin port."
+  [data]
   (let [data (str "put " data "\n")
         bytes (.getBytes data)
         ;; convert data to binary payload accepted by DatagramPacket.
