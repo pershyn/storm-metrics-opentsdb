@@ -14,15 +14,6 @@
                               ;; they are also mentioned in pom: https://github.com/apache/storm/blob/v0.9.5/pom.xml#L293
                               [org.apache.storm/storm-core "1.0.1"]
                               [org.clojure/clojure "1.7.0"]
-                              ;; there are more, but only logging-relevant are added
-                              [org.clojure/tools.logging "0.2.3"]
-                              [org.slf4j/log4j-over-slf4j "1.6.6"]
-                              [ch.qos.logback/logback-classic "1.0.13"]
-
-                              ;; others are not present in pom.xml, but are present in `lib` folder
-                              [org.slf4j/slf4j-api "1.7.5"]
-                              [org.clojure/tools.macro "0.1.0"]
-                              ; ... (there are more).
 
                               ;; There are also jars that are compiled-in into storm-core, but they are shaded
                               ;; See https://github.com/apache/storm/blob/master/storm-core/pom.xml#L394

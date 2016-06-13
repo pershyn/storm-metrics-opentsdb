@@ -1,18 +1,14 @@
 (ns storm.metric.OpenTSDBMetricsConsumer
   (:import (java.net DatagramSocket DatagramPacket InetAddress)
-           (java.util Map HashMap)
            (org.apache.storm.task TopologyContext IErrorReporter)
            (org.apache.storm Config)
            (org.apache.storm.metric.api IMetricsConsumer$TaskInfo
                                         IMetricsConsumer$DataPoint))
-  (:require [clojure.tools.logging :as log])
+  (:require [org.apache.storm.log :as log])
   (:gen-class :name storm.metric.OpenTSDBMetricsConsumer
               :implements [org.apache.storm.metric.api.IMetricsConsumer]
               :methods [^:static [makeConfig [String]
                                   java.util.Map]]))
-(defmacro log-message
-  [& args]
-  `(log/info (str ~@args)))
 
 (def tsd-prefix-key "metrics.opentsdb.tsd_prefix")
 
@@ -51,14 +47,12 @@
   "Handle the metrics format used by kafka-spout to report kafkaPartition stats
   See storm source code for metrics format details.
 
-  This function is intended to be used with storm 0.9.5
-  Because the metrics format is refactored in following versions.
+  This function is intended to be used with storm 1.0.1
   "
   [metric-id timestamp tags obj]
-  (if (or (instance? java.util.HashMap obj)
+  (if (or (instance? java.util.Map obj)
           (map? obj))
     (flatten (map (fn [[key val]]
-                    ;(log-message "Key: " key)
                     (if-let [match (re-find #"Partition\{host=.*,\stopic=(.*),\spartition=(\d*)\}/(.*)"
                                             key)]
                       ;["Partition{host=kafka-05.mytest.org:9092, topic=mytopic, partition=0}/fetchAPILatencyMean"
@@ -76,7 +70,7 @@
                            val " "
                            tags)))
                   obj))
-    (log-message "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
+    (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn kafkaOffset-datapoint-to-metric
   "Handle the metrics format used by KafkaUtils to report kafkaOffset
@@ -90,13 +84,9 @@
   like this 'topic/metricName' for total offset metrics
   "
   [metric-id timestamp tags obj]
-  (if (or (instance? java.util.HashMap obj)
+  (if (or (instance? java.util.Map obj)
           (map? obj))
     (do
-      ;(log-message (format "processing %s metrics for metric-id: %s, tags: %s"
-      ;                     (count obj)
-      ;                     metric-id
-      ;                     tags))
       (flatten (map (fn [[key val]]
                       (let [parts (clojure.string/split key #"/" 3)]
                         (case (count parts)
@@ -112,7 +102,7 @@
                                  " topic=" (nth parts 0) 
                                  " partition=" (first (re-find #"(\d*)" (nth parts 1)))))))
                     obj)))
-    (log-message "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
+    (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn datapoint-to-metrics
   "Transforms storms datapoints to opentsdb metrics format"
@@ -144,7 +134,7 @@
         (str metric-id " " timestamp " " obj " " tags)
         ;; datapoint is a map of key-values
         (if (or (map? obj)
-                (instance? HashMap obj))
+                (instance? java.util.Map obj))
           (flatten (map (fn [[key val]] (format "%s.%s %s %s %s"
                                                 metric-id
                                                 (clojure.string/replace (str key) ":" ".")
@@ -161,18 +151,18 @@
 ;; it is not possible to create static fields in class in clojure
 ;; like in is made in storm's Config, but it works with static method.
 ;; http://stackoverflow.com/questions/16252783/is-it-possible-to-use-clojures-gen-class-macro-to-generate-a-class-with-static?rq=1
-(defn ^Map -makeConfig
+(defn ^java.util.Map -makeConfig
   "Construct registration argument for OpenTSDBMetricsConsumer using the predefined key names."
   [tsd_prefix]
   {tsd-prefix-key tsd_prefix})
 
 (defn -prepare
   [this
-   ^Map topology-config
+   ^java.util.Map topology-config
    ^Object consumer-config         ;; aka registrationArgument
    ^TopologyContext context
    ^IErrorReporter error-reporter]
-  (assert (instance? Map consumer-config))
+  (assert (instance? java.util.Map consumer-config))
   ;; TODO: check that registrationArgument should be a Map??? Should it be (not) a map?
 
   (let [cc consumer-config
@@ -209,7 +199,7 @@
                      )]
   (doseq [m metrics]
     (try (send-data m)
-         (catch Exception e (log-message "Failed to send metric: " m))))))
+         (catch Exception e (log/log-error "Failed to send metric: " m))))))
 
 (defn -cleanup [this]
  (disconnect))
