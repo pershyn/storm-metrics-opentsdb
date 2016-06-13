@@ -92,13 +92,14 @@ Unfortunately, I have not found a proper place where all of them are documented.
 ### What else may be interesting:
 - __kafka spout stats__ - all the stats that storm-kafka spouts produce. Kafka tools do not recognize custom storm format that is used by storm-kafka. This can be fixed in STORM-650. `host` tag defines where the spout is running and is there for each metric. `component-id` correlates with topic, since spout reads only from one topic. The metric is send on minute basis by default. This, afaik, can be configured. In OpenTSDB frontends we can get rates on metrics, downsampling and other operations.
 
-  - `storm.metrics.$topology.kafkaOffset.spoutLag` tagged by `component-id` and `partition`.
-  - `storm.metrics.$topology.kafkaPartition.fetchAPIMessageCount` tagged by `component-id`, `partition`
-  - `storm.metrics.$topology.kafkaPartition.fetchAPICallCount` tagged by `partition`, `component-id` (correlates with topic)
-  - `storm.metrics.$topology.kafkaPartition.fetchAPILatencyMax` tagged by `component-id`, `partition`
-  - `storm.metrics.$topology.kafkaPartition.fetchAPILatencyMean` tagged by `component-id`, `partition`
-  - `storm.metrics.$topology.kafkaOffset.latestEmittedOffset` tagged by `partition`, `component-id`
-  - `storm.metrics.$topology.kafkaOffset.latestTimeOffset` tagged by `partition`, `component-id`
+  - `storm.metrics.$topology.kafkaOffset.spoutLag` tagged by `component-id`, `topic` and `partition`
+  - `storm.metrics.$topology.kafkaOffset.totalSpoutLag` tagged by `component-id`, `topic` (redundant?)
+  - `storm.metrics.$topology.kafkaPartition.fetchAPIMessageCount` tagged by `component-id`, `topic` and `partition`
+  - `storm.metrics.$topology.kafkaPartition.fetchAPICallCount` tagged by `component-id`, `topic` and `partition`
+  - `storm.metrics.$topology.kafkaPartition.fetchAPILatencyMax` tagged by `component-id`, `topic` and `partition`
+  - `storm.metrics.$topology.kafkaPartition.fetchAPILatencyMean` tagged by `component-id`, `topic` and `partition`
+  - `storm.metrics.$topology.kafkaOffset.latestEmittedOffset` tagged by `component-id`, `topic` and `partition`
+  - `storm.metrics.$topology.kafkaOffset.latestTimeOffset` tagged by `component-id`, `topic` and `partition`
   - ... maybe more
 
 - __storm system metrics__:

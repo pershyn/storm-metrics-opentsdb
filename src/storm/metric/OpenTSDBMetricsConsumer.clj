@@ -59,9 +59,9 @@
           (map? obj))
     (flatten (map (fn [[key val]]
                     ;(log-message "Key: " key)
-                    (if-let [match (re-find #"(Partition\{host=.*,\spartition=(\d*)\}/)(.*)"
+                    (if-let [match (re-find #"Partition\{host=.*,\stopic=(.*),\spartition=(\d*)\}/(.*)"
                                             key)]
-                      ;["Partition{host=kafka-05.mytest.org:9092, partition=0}/fetchAPILatencyMean"
+                      ;["Partition{host=kafka-05.mytest.org:9092, topic=mytopic, partition=0}/fetchAPILatencyMean"
                       ; "Partition{host=kafka-05.mytest.org:9092, partition=0}/"
                       ; "0"
                       ; "fetchAPILatencyMean"]
@@ -69,6 +69,7 @@
                            timestamp " "
                            val " "
                            tags " "
+                           "topic=" (nth match 1)
                            "partition=" (nth match 2))
                       (str metric-id "." key " "
                            timestamp " "
@@ -80,10 +81,13 @@
 (defn kafkaOffset-datapoint-to-metric
   "Handle the metrics format used by KafkaUtils to report kafkaOffset
 
-  Intended to be used with kafka-spout v 0.9.5
+  Intended to be used with kafka-spout v 1.0.1
   See the format in kafka-spout sources:
 
-  https://github.com/apache/storm/blob/v0.9.5/external/storm-kafka/src/jvm/storm/kafka/KafkaUtils.java
+  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/KafkaUtils.java
+
+  Basically keys look like this 'topic/partition_N/metricName' for partition specific offset metrics and
+  like this 'topic/metricName' for total offset metrics
   "
   [metric-id timestamp tags obj]
   (if (or (instance? java.util.HashMap obj)
@@ -94,18 +98,19 @@
       ;                     metric-id
       ;                     tags))
       (flatten (map (fn [[key val]]
-                      (if-let [match (re-find #"partition_(\d*)/(\w*)"
-                                              key)]
-                        ;[\"partition_0/earliestTimeOffset\" \"0\" \"earliestTimeOffset\"]
-                        (str metric-id "." (nth match 2) " "
-                             timestamp " "
-                             val " "
-                             tags " "
-                             "partition=" (nth match 1))
-                        (str metric-id "." key " "
-                             timestamp " "
-                             val " "
-                             tags)))
+                      (let [parts (clojure.string/split key #"/" 3)]
+                        (case (count parts)
+                          2 (str metric-id "." (nth parts 1) " "
+                                 timestamp " "
+                                 val " "
+                                 tags
+                                 " topic=" (nth parts 0)) 
+                          3 (str metric-id "." (nth parts 2) " "
+                                 timestamp " "
+                                 val " "
+                                 tags
+                                 " topic=" (nth parts 0) 
+                                 " partition=" (first (re-find #"(\d*)" (nth parts 1)))))))
                     obj)))
     (log-message "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
