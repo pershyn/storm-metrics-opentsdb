@@ -1,6 +1,5 @@
-(defproject storm.metric/opentsdb-metrics-consumer "0.0.10"
+(defproject storm.metric/opentsdb-metrics-consumer "0.1.0"
   :description "Storm Metrics OpenTSDB Metrics Consumer"
-  :dependencies [[org.clojure/clojure "1.5.1"]]
   :min-lein-version "2.0.0"
   :global-vars {*warn-on-reflection* true}
   :aot :all
@@ -13,8 +12,8 @@
                               ;; see: http://mail-archives.apache.org/mod_mbox/storm-user/201407.mbox/%3CCAN4Gn11592SWxy8EvY3eaLvo_ERujA6w0EX0OWpZg4FwjaWdrg@mail.gmail.com%3E
                               ;; there are also some other jars that are provided. They are in normally in `lib` folder of storm distribution
                               ;; they are also mentioned in pom: https://github.com/apache/storm/blob/v0.9.5/pom.xml#L293
-                              [org.apache.storm/storm-core "0.9.5"]
-                              [org.clojure/clojure "1.5.1"]
+                              [org.apache.storm/storm-core "1.0.1"]
+                              [org.clojure/clojure "1.7.0"]
                               ;; there are more, but only logging-relevant are added
                               [org.clojure/tools.logging "0.2.3"]
                               [org.slf4j/log4j-over-slf4j "1.6.6"]

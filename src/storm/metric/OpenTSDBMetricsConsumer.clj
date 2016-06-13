@@ -1,13 +1,13 @@
 (ns storm.metric.OpenTSDBMetricsConsumer
   (:import (java.net DatagramSocket DatagramPacket InetAddress)
            (java.util Map HashMap)
-           (backtype.storm.task TopologyContext IErrorReporter)
-           (backtype.storm Config)
-           (backtype.storm.metric.api IMetricsConsumer$TaskInfo
-                                      IMetricsConsumer$DataPoint))
+           (org.apache.storm.task TopologyContext IErrorReporter)
+           (org.apache.storm Config)
+           (org.apache.storm.metric.api IMetricsConsumer$TaskInfo
+                                        IMetricsConsumer$DataPoint))
   (:require [clojure.tools.logging :as log])
   (:gen-class :name storm.metric.OpenTSDBMetricsConsumer
-              :implements [backtype.storm.metric.api.IMetricsConsumer]
+              :implements [org.apache.storm.metric.api.IMetricsConsumer]
               :methods [^:static [makeConfig [String]
                                   java.util.Map]]))
 (defmacro log-message

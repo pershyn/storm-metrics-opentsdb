@@ -8,7 +8,7 @@ This project is intended to be used with [grafana](http://grafana.org/), but can
 
 So far it is required to have `tcollector` with `udp_bridge` plugin installed on every node of the cluster where the topology runs - see reasoning in Dependencies.
 
-Developed for apache storm and kafka-spout version 0.9.5.
+Developed for apache storm and kafka-spout version 1.0.1 (starting from version 0.1.0 of this library)
 
 ## Usage
 
@@ -17,12 +17,12 @@ Add this as a dependency to your `pom.xml`
     <dependency>
       <groupId>storm.metric</groupId>
       <artifactId>opentsdb-metrics-consumer</artifactId>
-      <version>0.0.9</version>
+      <version>0.1.0</version>
     </dependency>
 
 or `project.clj`:
 
-    [storm.metric/opentsdb-metrics-consumer "0.0.9"]
+    [storm.metric/opentsdb-metrics-consumer "0.1.0"]
 
 Then use it similar to other metrics consumers:
 
