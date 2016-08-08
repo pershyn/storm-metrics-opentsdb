@@ -38,7 +38,7 @@
         multi-count-datapoint (IMetricsConsumer$DataPoint. "test-multi-count-metric"
                                                            {"mapped-metric" 32
                                                             "mapped-metric2" 33})
-        multi-count-datapoint-with-columns (IMetricsConsumer$DataPoint. "__process-latency"
+        multi-count-datapoint-with-colons (IMetricsConsumer$DataPoint. "__process-latency"
                                                                         {"bolt-number-one:default" 6.06896551724138
                                                                          "bolt-number-two:default" 7.21590909090909})
         kafka-offset-datapoint (IMetricsConsumer$DataPoint. "kafkaOffset"
@@ -54,8 +54,8 @@
             => (list "hello-metric.test-multi-count-metric.mapped-metric2 77777777 33 host=worker.host.name port=12345 task-id=12 component-id=component-id"
                      "hello-metric.test-multi-count-metric.mapped-metric 77777777 32 host=worker.host.name port=12345 task-id=12 component-id=component-id"))
 
-      (fact "works as expected on multi-count-datapoint with columns in names"
-            (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags multi-count-datapoint-with-columns)
+      (fact "works as expected on multi-count-datapoint with colons in names"
+            (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags multi-count-datapoint-with-colons)
             => (list "hello-metric.__process-latency.bolt-number-one.default 77777777 6.06896551724138 host=worker.host.name port=12345 task-id=12 component-id=component-id"
                      "hello-metric.__process-latency.bolt-number-two.default 77777777 7.21590909090909 host=worker.host.name port=12345 task-id=12 component-id=component-id"))
 
