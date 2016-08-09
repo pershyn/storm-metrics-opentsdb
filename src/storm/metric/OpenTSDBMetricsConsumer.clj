@@ -19,16 +19,14 @@
 ;; using the standart port for tcollector udp_bridge
 (def ^Integer tcollector-udp-bridge-port (int 8953))
 
-(def socket (ref nil))
-(def metric-id-header (ref nil))
+(def socket (atom nil))
+(def metric-id-header (atom nil))
 
-(defn- connect []
-  (dosync
-    (ref-set socket (DatagramSocket.))))
+(defn- connect! []
+  (reset! socket (DatagramSocket.)))
 
-(defn- disconnect []
-  (dosync
-    (.close ^DatagramSocket @socket)))
+(defn- disconnect! []
+  (.close ^DatagramSocket @socket))
 
 (defn- send-data 
   "Sends data to tcollector's udp_bridge plugin port."
@@ -173,9 +171,9 @@
         tsd-prefix (if (not= \. (last tsd-prefix))
                      (str tsd-prefix ".")
                      tsd-prefix)]
-    (dosync (ref-set metric-id-header (str tsd-prefix       ;; the point to the end of metric-id-header will be added during conversion
-                                           topology-name)))
-    (connect)))
+    (reset! metric-id-header (str tsd-prefix       ;; the point to the end of metric-id-header will be added during conversion
+                                  topology-name)))
+    (connect!))
 
 ;; TODO: Improve -  processed metrics can be added to buffer, where they can be read from with async routines, this may improve the througput.
 
@@ -202,4 +200,4 @@
          (catch Exception e (log/log-error "Failed to send metric: " m))))))
 
 (defn -cleanup [this]
- (disconnect))
+ (disconnect!))
