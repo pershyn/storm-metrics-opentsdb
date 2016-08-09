@@ -43,9 +43,15 @@
 
 (defn kafkaPartition-data-point-to-metric
   "Handle the metrics format used by kafka-spout to report kafkaPartition stats
-  See storm source code for metrics format details.
 
   This function is intended to be used with storm 1.0.1
+  See the format in kafka-spout sources:
+  
+  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/PartitionManager.java#L127
+   and
+  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/Partition.java#L69
+
+  Basically keys look like this 'Partition{host=brokerX:9092, topic=mytopic, partition=N}/metricName'
   "
   [metric-id timestamp tags obj]
   (if (or (instance? java.util.Map obj)
@@ -53,10 +59,6 @@
     (flatten (map (fn [[key val]]
                     (if-let [match (re-find #"Partition\{host=.*,\stopic=(.*),\spartition=(\d*)\}/(.*)"
                                             key)]
-                      ;["Partition{host=kafka-05.mytest.org:9092, topic=mytopic, partition=0}/fetchAPILatencyMean"
-                      ; "Partition{host=kafka-05.mytest.org:9092, partition=0}/"
-                      ; "0"
-                      ; "fetchAPILatencyMean"]
                       (str metric-id "." (nth match 3) " "
                            timestamp " "
                            val " "
@@ -76,7 +78,7 @@
   Intended to be used with kafka-spout v 1.0.1
   See the format in kafka-spout sources:
 
-  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/KafkaUtils.java
+  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/KafkaUtils.java#L127
 
   Basically keys look like this 'topic/partition_N/metricName' for partition specific offset metrics and
   like this 'topic/metricName' for total offset metrics
@@ -108,14 +110,6 @@
    timestamp
    tags
    ^IMetricsConsumer$DataPoint datapoint]
-
-  ; The metrics are received in data points for task.
-  ; Next values are in task id:
-  ; - timestamp
-  ; - srcWorkerHost
-  ; - srcWorkerPort
-  ; - srcTaskId
-  ; - srcComponentId
   ; The data point has name and value.
   ; datapoint can be either a value with own name
   ; or a map in case of multi-count metrics
@@ -181,6 +175,13 @@
   [this
    ^IMetricsConsumer$TaskInfo taskinfo
    datapoints]       ; ^Collection<DataPoint>
+  ; The metrics are received as a collection of DataPoints for specific TaskInfo object.
+  ; The following values are contained the TaskInfo:
+  ; - timestamp
+  ; - srcWorkerHost
+  ; - srcWorkerPort
+  ; - srcTaskId
+  ; - srcComponentId
   (let [timestamp (str (.timestamp taskinfo))
         tags (str "host=" (.srcWorkerHost taskinfo) " "
                   "port=" (.srcWorkerPort taskinfo) " "
