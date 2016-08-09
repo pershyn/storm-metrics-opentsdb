@@ -125,11 +125,11 @@
         (if (or (map? obj)
                 (instance? java.util.Map obj))
           (map (fn [[key val]] (format "%s.%s %s %s %s"
-                                                metric-id
-                                                (clojure.string/replace (str key) ":" ".")
-                                                timestamp
-                                                val
-                                                tags))
+                                       metric-id
+                                       (clojure.string/replace (str key) ":" ".")
+                                       timestamp
+                                       val
+                                       tags))
                obj)
           (throw
             (Exception.
