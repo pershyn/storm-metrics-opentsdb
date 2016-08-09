@@ -63,7 +63,7 @@
                            timestamp " "
                            val " "
                            tags " "
-                           "topic=" (nth match 1)
+                           "topic=" (nth match 1) " "
                            "partition=" (nth match 2))
                       (str metric-id "." key " "
                            timestamp " "
