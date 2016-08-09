@@ -56,7 +56,7 @@
   [metric-id timestamp tags obj]
   (if (or (instance? java.util.Map obj)
           (map? obj))
-    (flatten (map (fn [[key val]]
+      (map (fn [[key val]]
                     (if-let [match (re-find #"Partition\{host=.*,\stopic=(.*),\spartition=(\d*)\}/(.*)"
                                             key)]
                       (str metric-id "." (nth match 3) " "
@@ -69,7 +69,7 @@
                            timestamp " "
                            val " "
                            tags)))
-                  obj))
+                  obj)
     (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn kafkaOffset-datapoint-to-metric
@@ -86,8 +86,7 @@
   [metric-id timestamp tags obj]
   (if (or (instance? java.util.Map obj)
           (map? obj))
-    (do
-      (flatten (map (fn [[key val]]
+    (map (fn [[key val]]
                       (let [parts (clojure.string/split key #"/" 3)]
                         (case (count parts)
                           2 (str metric-id "." (nth parts 1) " "
@@ -101,7 +100,7 @@
                                  tags
                                  " topic=" (nth parts 0) 
                                  " partition=" (first (re-find #"(\d*)" (nth parts 1)))))))
-                    obj)))
+         obj)
     (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn datapoint-to-metrics
@@ -123,17 +122,17 @@
       ;; default
       (if (number? obj)
         ;; datapoint is a Numberic value
-        (str metric-id " " timestamp " " obj " " tags)
+        [(str metric-id " " timestamp " " obj " " tags)]
         ;; datapoint is a map of key-values
         (if (or (map? obj)
                 (instance? java.util.Map obj))
-          (flatten (map (fn [[key val]] (format "%s.%s %s %s %s"
+          (map (fn [[key val]] (format "%s.%s %s %s %s"
                                                 metric-id
                                                 (clojure.string/replace (str key) ":" ".")
                                                 timestamp
                                                 val
                                                 tags))
-                        obj))
+               obj)
           (throw
             (Exception.
               (format "Failed to parse metric: Not expected type: %s: %s"
@@ -188,12 +187,11 @@
                   "task-id=" (.srcTaskId taskinfo) " "
                   "component-id=" (.srcComponentId taskinfo))
         metrics (->> datapoints
-                     (map #(datapoint-to-metrics @metric-id-header
-                                                 timestamp
-                                                 tags
-                                                 %))
-                     (flatten)
-                     (filter (complement nil?)) ;; filter out nil's
+                     (mapcat #(datapoint-to-metrics @metric-id-header
+                                                    timestamp
+                                                    tags
+                                                    %))
+                     (remove nil?) ;; filter out invalid datapoints
                      ;(filter (complement #(re-find #"__" %))) ;; filter out storm system metrics TODO: add this option to parameter
                      )]
   (doseq [m metrics]
