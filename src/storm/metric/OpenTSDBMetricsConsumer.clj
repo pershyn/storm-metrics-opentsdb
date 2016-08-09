@@ -65,10 +65,7 @@
                            tags " "
                            "topic=" (nth match 1) " "
                            "partition=" (nth match 2))
-                      (str metric-id "." key " "
-                           timestamp " "
-                           val " "
-                           tags)))
+                      (log/log-warn "Received invalid kakaPartition metric '" key "'")))
                   obj)
     (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
@@ -87,19 +84,20 @@
   (if (or (instance? java.util.Map obj)
           (map? obj))
     (map (fn [[key val]]
-                      (let [parts (clojure.string/split key #"/" 3)]
-                        (case (count parts)
-                          2 (str metric-id "." (nth parts 1) " "
-                                 timestamp " "
-                                 val " "
-                                 tags
-                                 " topic=" (nth parts 0)) 
-                          3 (str metric-id "." (nth parts 2) " "
-                                 timestamp " "
-                                 val " "
-                                 tags
-                                 " topic=" (nth parts 0) 
-                                 " partition=" (first (re-find #"(\d*)" (nth parts 1)))))))
+           (let [parts (clojure.string/split key #"/" 4)]
+             (case (count parts)
+               2 (str metric-id "." (nth parts 1) " "
+                      timestamp " "
+                      val " "
+                      tags
+                      " topic=" (nth parts 0)) 
+               3 (str metric-id "." (nth parts 2) " "
+                      timestamp " "
+                      val " "
+                      tags
+                      " topic=" (nth parts 0) 
+                      " partition=" (first (re-find #"(\d+)" (nth parts 1))))
+               (log/log-warn "Received invalid kakaOffset metric '" key "'"))))
          obj)
     (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
