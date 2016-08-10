@@ -44,15 +44,17 @@
 (defn kafkaPartition-data-point-to-metric
   "Handle the metrics format used by kafka-spout to report kafkaPartition stats
 
-  This function is intended to be used with storm 1.0.1
-  See the format in kafka-spout sources:
+   This function is intended to be used with storm 1.0.1
+   See the format in kafka-spout sources:
   
-  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/PartitionManager.java#L127
-   and
-  https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/Partition.java#L69
+   https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/PartitionManager.java#L127
+    and
+   https://github.com/apache/storm/blob/v1.0.1/external/storm-kafka/src/jvm/org/apache/storm/kafka/Partition.java#L69
 
-  Basically keys look like this 'Partition{host=brokerX:9092, topic=mytopic, partition=N}/metricName'
-  "
+   Basically keys look like this 'Partition{host=brokerX:9092, topic=mytopic, partition=N}/metricName'
+
+   Returns collection of metrics strings.
+     For example: (\"metric string 1\" \"metric string 2\")"
   [metric-id timestamp tags obj]
   (if (or (instance? java.util.Map obj)
           (map? obj))
@@ -79,7 +81,9 @@
 
   Basically keys look like this 'topic/partition_N/metricName' for partition specific offset metrics and
   like this 'topic/metricName' for total offset metrics
-  "
+
+  Returns collection of metrics strings.
+   For example: (\"metric string 1\" \"metric string 2\")"
   [metric-id timestamp tags obj]
   (if (or (instance? java.util.Map obj)
           (map? obj))
@@ -102,7 +106,10 @@
     (log/log-warn "Failed to parse kafka datapoint: " obj ", type:" (type obj))))
 
 (defn datapoint-to-metrics
-  "Transforms storms datapoints to opentsdb metrics format"
+  "Transforms storms datapoints to opentsdb metrics format
+
+   Returns collection of metrics strings.
+     For example: (\"metric string 1\" \"metric string 2\")"
   [metric-id-header
    timestamp
    tags
