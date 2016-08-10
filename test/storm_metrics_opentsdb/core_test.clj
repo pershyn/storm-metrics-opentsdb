@@ -47,7 +47,7 @@
       "about datapoint-to-metrics"
       (fact "works as expected on normal datapoint"
             (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags datapoint)
-            => "hello-metric.test-count-metric 77777777 12 host=worker.host.name port=12345 task-id=12 component-id=component-id")
+            => (just #{"hello-metric.test-count-metric 77777777 12 host=worker.host.name port=12345 task-id=12 component-id=component-id"}))
 
       (fact "works as expected on multi-count-datapoint"
             (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags multi-count-datapoint)
