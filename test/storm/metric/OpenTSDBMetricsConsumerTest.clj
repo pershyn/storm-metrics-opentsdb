@@ -1,4 +1,4 @@
-(ns storm-metrics-opentsdb.core-test
+(ns storm.metric.OpenTSDBMetricsConsumerTest
   (:require [midje.sweet :refer :all]
             [storm.metric.OpenTSDBMetricsConsumer :refer :all])
   (:import [org.apache.storm.metric.api IMetricsConsumer$TaskInfo
