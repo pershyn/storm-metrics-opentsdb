@@ -17,15 +17,14 @@ Add this as a dependency to your `pom.xml`
     <dependency>
       <groupId>storm.metric</groupId>
       <artifactId>opentsdb-metrics-consumer</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1</version>
     </dependency>
 
 or `project.clj`:
 
-    [storm.metric/opentsdb-metrics-consumer "0.1.0"]
+    [storm.metric/opentsdb-metrics-consumer "0.1.1"]
 
 Then use it similar to other metrics consumers:
-
 
 ```
 ;; Clojure

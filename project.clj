@@ -1,4 +1,4 @@
-(defproject storm.metric/opentsdb-metrics-consumer "0.1.0"
+(defproject storm.metric/opentsdb-metrics-consumer "0.1.1"
   :description "Storm Metrics OpenTSDB Metrics Consumer"
   :min-lein-version "2.0.0"
   :global-vars {*warn-on-reflection* true}
