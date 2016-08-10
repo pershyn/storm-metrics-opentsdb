@@ -39,8 +39,8 @@
                                                            {"mapped-metric" 32
                                                             "mapped-metric2" 33})
         multi-count-datapoint-with-colons (IMetricsConsumer$DataPoint. "__process-latency"
-                                                                        {"bolt-number-one:default" 6.06896551724138
-                                                                         "bolt-number-two:default" 7.21590909090909})
+                                                                       {"bolt-number-one:default" 6.06896551724138
+                                                                        "bolt-number-two:default" 7.21590909090909})
         kafka-offset-datapoint (IMetricsConsumer$DataPoint. "kafkaOffset"
                                                             kafka-offset-datapoint-obj)]
     (facts
@@ -59,16 +59,16 @@
             => (just #{"hello-metric.__process-latency.bolt-number-one.default 77777777 6.06896551724138 host=worker.host.name port=12345 task-id=12 component-id=component-id"
                        "hello-metric.__process-latency.bolt-number-two.default 77777777 7.21590909090909 host=worker.host.name port=12345 task-id=12 component-id=component-id"}))
 
-    (fact "works as expected on kafkaOffset datapoint"
-          (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags kafka-offset-datapoint)
-          => (just #{"hello-metric.kafkaOffset.totalSpoutLag 77777777 1467 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
-                     "hello-metric.kafkaOffset.earliestTimeOffset 77777777 86378711184 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"
-                     "hello-metric.kafkaOffset.totalLatestEmittedOffset 77777777 86664047241 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
-                     "hello-metric.kafkaOffset.totalLatestTimeOffset 77777777 86664048708 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
-                     "hello-metric.kafkaOffset.spoutLag 77777777 1467 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"
-                     "hello-metric.kafkaOffset.totalEarliestTimeOffset 77777777 86378711184 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
-                     "hello-metric.kafkaOffset.latestEmittedOffset 77777777 86664047241 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"
-                     "hello-metric.kafkaOffset.latestTimeOffset 77777777 86664048708 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"})))
+      (fact "works as expected on kafkaOffset datapoint"
+            (storm.metric.OpenTSDBMetricsConsumer/datapoint-to-metrics metric-id-header timestamp tags kafka-offset-datapoint)
+            => (just #{"hello-metric.kafkaOffset.totalSpoutLag 77777777 1467 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
+                       "hello-metric.kafkaOffset.earliestTimeOffset 77777777 86378711184 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"
+                       "hello-metric.kafkaOffset.totalLatestEmittedOffset 77777777 86664047241 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
+                       "hello-metric.kafkaOffset.totalLatestTimeOffset 77777777 86664048708 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
+                       "hello-metric.kafkaOffset.spoutLag 77777777 1467 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"
+                       "hello-metric.kafkaOffset.totalEarliestTimeOffset 77777777 86378711184 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1"
+                       "hello-metric.kafkaOffset.latestEmittedOffset 77777777 86664047241 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"
+                       "hello-metric.kafkaOffset.latestTimeOffset 77777777 86664048708 host=worker.host.name port=12345 task-id=12 component-id=component-id topic=topic1 partition=0"})))
 
     (facts
       "about kafkaOffset-datapoint-to-metric"
